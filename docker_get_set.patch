@@ -1,0 +1,548 @@
+diff --git a/api/client/cli.go b/api/client/cli.go
+index fa3be2d..d61b1b8 100644
+--- a/api/client/cli.go
++++ b/api/client/cli.go
+@@ -41,6 +41,7 @@ func (cli *DockerCli) getMethod(name string) (func(...string) error, bool) {
+ 	}
+ 	methodName := "Cmd" + strings.ToUpper(name[:1]) + strings.ToLower(name[1:])
+ 	method := reflect.ValueOf(cli).MethodByName(methodName)
++	//sakshi
+ 	if !method.IsValid() {
+ 		return nil, false
+ 	}
+diff --git a/api/client/commands.go b/api/client/commands.go
+index a41fdc6..782437b 100644
+--- a/api/client/commands.go
++++ b/api/client/commands.go
+@@ -436,7 +436,7 @@ func (cli *DockerCli) CmdInfo(args ...string) error {
+ 	if err != nil {
+ 		return err
+ 	}
+-
++	fmt.Println("remoteInfo", remoteInfo)
+ 	if _, err := out.Write(body); err != nil {
+ 		log.Errorf("Error reading remote info: %s", err)
+ 		return err
+@@ -1725,6 +1725,117 @@ func (cli *DockerCli) CmdDiff(args ...string) error {
+ 	return nil
+ }
+ 
++//Sakshi
++func (cli *DockerCli) CmdStats(args ...string) error {
++	var (
++		cmd    = cli.Subcmd("stats", "CONTAINER", "Fetch the stats of a container")
++	)
++	
++	fmt.Println("hey! entering In CmdStats....")
++	if err := cmd.Parse(args); err != nil {
++		return nil
++	}
++	if cmd.NArg() != 1 {
++		cmd.Usage()
++		return nil
++	}
++	name := cmd.Arg(0)
++//	fmt.Println("******CmdStats:: name is %s ******",name)
++	
++	v:= url.Values{}
++	v.Set("a",name)
++
++	body, _, err := readBody(cli.call("GET", "/containers/"+name+"/stats?"+v.Encode(), nil, false))
++	if err != nil {
++		fmt.Println("******CmdStats:: ERROR readBody******")
++		fmt.Println(err)
++		return err
++	}
++//	fmt.Println("******CmdStats:: after readBody******")
++	out := engine.NewOutput()
++	remoteInfo, err := out.AddEnv()
++	if err != nil {
++		return err
++	}
++	if _, err := out.Write(body); err != nil {
++		log.Errorf("Error reading remote info: %s", err)
++		return err
++	}
++	out.Close()
++	
++	fmt.Fprintf(cli.out, "--------------------------------------\n")
++	fmt.Fprintf(cli.out, "Docker Stats\n")
++	fmt.Fprintf(cli.out, "--------------------------------------\n")
++	fmt.Fprintf(cli.out, "CPU\n")
++	fmt.Fprintf(cli.out, "Total usage: %d\n", remoteInfo.GetInt("Totalusage"))
++	fmt.Fprintf(cli.out, "Kernelmode usage: %d\n", remoteInfo.GetInt("UsageInKernelmode"))
++	fmt.Fprintf(cli.out, "UserMode usage: %d\n", remoteInfo.GetInt("UsageInUsermode"))
++	fmt.Fprintf(cli.out, "Memory\n")
++	fmt.Fprintf(cli.out, "Current usage: %d\n", remoteInfo.GetInt("CurrentUsage"))
++	fmt.Fprintf(cli.out, "Maximum usage: %d\n", remoteInfo.GetInt("MaxUsage"))
++	fmt.Fprintf(cli.out, "Fail Count: %d\n", remoteInfo.GetInt("Failcnt"))
++	fmt.Fprintf(cli.out, "--------------------------------------\n")
++	return nil
++	
++}
++
++//Sakshi
++
++//Sakshi
++func (cli *DockerCli) CmdSet(args ...string) error {
++        var (
++                cmd    = cli.Subcmd("set", "CONTAINER [ARG...]", "Set the Cpu values of a container")
++        )
++
++        fmt.Println("hey! entering In CmdSet....")
++        if err := cmd.Parse(args); err != nil {
++                return nil
++        }
++        if cmd.NArg() != 2 {
++                cmd.Usage()
++                return nil
++        }
++        name := cmd.Arg(0)
++        fmt.Println("******CmdSet:: name is %s ******",name)
++	
++	if cmd.NArg() == 2 {
++		var (
++			param  = cmd.Arg(1)
++			value = strings.SplitN(param, "=", 2)
++		)
++		
++		//fmt.Println("******CmdSet:: Arg 1 is ******",param)
++		//fmt.Println("******CmdSet:: value is ******",value)
++		param = value[0]
++		val := value[1]
++		
++		fmt.Println("******CmdSet:: PARAM is ******",param)
++		fmt.Println("******CmdSet:: VAL is ******",val)
++		if (false == (strings.EqualFold("cpushares", param))) {
++		
++		fmt.Println("**CmdSet:: Param given is wrong! **",param)
++                fmt.Println("**CmdSet:: MUST BE CPUSHARES!!")
++		return nil
++		}		
++
++        v:= url.Values{}
++        v.Set("container",name)
++	v.Set("param",param)
++	v.Set("value",val)
++
++        _, _, err := readBody(cli.call("POST", "/containers/"+name+"/set?"+ v.Encode(), nil, false))
++        if err != nil {
++                fmt.Println("******CmdSet:: ERROR readBody******")
++                fmt.Println(err)
++                return err
++        } else { 
++        fmt.Println("******CmdSet:: SET SUCCESSFULLY!!******")
++        }
++	}
++	return nil
++
++}
++
+ func (cli *DockerCli) CmdLogs(args ...string) error {
+ 	var (
+ 		cmd    = cli.Subcmd("logs", "CONTAINER", "Fetch the logs of a container")
+@@ -1742,6 +1853,7 @@ func (cli *DockerCli) CmdLogs(args ...string) error {
+ 		return nil
+ 	}
+ 	name := cmd.Arg(0)
++	fmt.Println("******CmdLogs:: name is %s ******",name)	
+ 
+ 	steam, _, err := cli.call("GET", "/containers/"+name+"/json", nil, false)
+ 	if err != nil {
+@@ -1765,7 +1877,8 @@ func (cli *DockerCli) CmdLogs(args ...string) error {
+ 		v.Set("follow", "1")
+ 	}
+ 	v.Set("tail", *tail)
+-
++	
++	fmt.Println("hey! Exiting CmdLogs....")
+ 	return cli.streamHelper("GET", "/containers/"+name+"/logs?"+v.Encode(), env.GetSubEnv("Config").GetBool("Tty"), nil, cli.out, cli.err, nil)
+ }
+ 
+diff --git a/api/client/utils.go b/api/client/utils.go
+index b1fec64..583f589 100644
+--- a/api/client/utils.go
++++ b/api/client/utils.go
+@@ -274,7 +274,9 @@ func readBody(stream io.ReadCloser, statusCode int, err error) ([]byte, int, err
+ 	}
+ 	body, err := ioutil.ReadAll(stream)
+ 	if err != nil {
++		fmt.Println("*** error in READBODY****");
+ 		return nil, -1, err
+ 	}
++	//fmt.Println("IN READBODY:::: body %x , statuscode %d", body,statusCode)
+ 	return body, statusCode, nil
+ }
+diff --git a/api/server/server.go b/api/server/server.go
+index 74bebfd..8f346a7 100644
+--- a/api/server/server.go
++++ b/api/server/server.go
+@@ -365,8 +365,17 @@ func getContainersJSON(eng *engine.Engine, version version.Version, w http.Respo
+ 	}
+ 	return nil
+ }
++//sakshi
++func getContainersStats(eng *engine.Engine, version version.Version, w http.ResponseWriter, r *http.Request, vars map[string]string) error {
++	fmt.Println("hey! Entering getContainersStats....")
++	w.Header().Set("Content-Type", "application/json")
++	eng.ServeHTTP(w, r)
++	return nil
++}
+ 
+ func getContainersLogs(eng *engine.Engine, version version.Version, w http.ResponseWriter, r *http.Request, vars map[string]string) error {
++	
++	fmt.Println("hey! Entering getContainersLogs....")
+ 	if err := parseForm(r); err != nil {
+ 		return err
+ 	}
+@@ -411,6 +420,7 @@ func getContainersLogs(eng *engine.Engine, version version.Version, w http.Respo
+ 	if err := logsJob.Run(); err != nil {
+ 		fmt.Fprintf(outStream, "Error running logs job: %s\n", err)
+ 	}
++	 fmt.Println("hey! EXITING getContainersLogs....")
+ 	return nil
+ }
+ 
+@@ -770,6 +780,27 @@ func postContainersStop(eng *engine.Engine, version version.Version, w http.Resp
+ 	return nil
+ }
+ 
++func postContainerSet(eng *engine.Engine, version version.Version, w   http.ResponseWriter, r *http.Request, vars map[string]string) error {
++        
++	fmt.Println("******postContainerSet:: ENTER******")
++	if err := parseForm(r); err != nil {
++                return err
++        }
++        if vars == nil {
++                return fmt.Errorf("Missing parameter")
++        }
++        job := eng.Job("set", vars["name"])
++        job.Setenv("param", r.Form.Get("param"))
++	job.Setenv("value", r.Form.Get("value"))
++        if err := job.Run(); err != nil {
++        fmt.Println("******postContainerSet:: Returned ERROR******")        
++	return err
++        }
++        w.WriteHeader(http.StatusNoContent)
++	fmt.Println("******postContainerSet:: EXITING!!******")
++        return nil
++}
++
+ func postContainersWait(eng *engine.Engine, version version.Version, w http.ResponseWriter, r *http.Request, vars map[string]string) error {
+ 	if vars == nil {
+ 		return fmt.Errorf("Missing parameter")
+@@ -1227,6 +1258,7 @@ func createRouter(eng *engine.Engine, logging, enableCors bool, dockerVersion st
+ 			"/containers/{name:.*}/top":       getContainersTop,
+ 			"/containers/{name:.*}/logs":      getContainersLogs,
+ 			"/containers/{name:.*}/attach/ws": wsContainersAttach,
++			"/containers/{name:.*}/stats":     getContainersStats,
+ 		},
+ 		"POST": {
+ 			"/auth":                         postAuth,
+@@ -1250,6 +1282,7 @@ func createRouter(eng *engine.Engine, logging, enableCors bool, dockerVersion st
+ 			"/containers/{name:.*}/exec":    postContainerExecCreate,
+ 			"/exec/{name:.*}/start":         postContainerExecStart,
+ 			"/exec/{name:.*}/resize":        postContainerExecResize,
++			"/containers/{name:.*}/set":                    postContainerSet,
+ 		},
+ 		"DELETE": {
+ 			"/containers/{name:.*}": deleteContainers,
+diff --git a/daemon/container.go b/daemon/container.go
+index 625efa8..e842abf 100644
+--- a/daemon/container.go
++++ b/daemon/container.go
+@@ -13,8 +13,10 @@ import (
+ 	"syscall"
+ 	"time"
+ 
++	"github.com/docker/libcontainer"	
+ 	"github.com/docker/libcontainer/devices"
+ 	"github.com/docker/libcontainer/label"
++	cgroupfs "github.com/docker/libcontainer/cgroups/fs"
+ 
+ 	"github.com/docker/docker/archive"
+ 	"github.com/docker/docker/daemon/execdriver"
+@@ -724,6 +726,50 @@ func (container *Container) ReadLog(name string) (io.Reader, error) {
+ 	return os.Open(pth)
+ }
+ 
++//Sakshi
++func (container *Container) showStats()(*libcontainer.ContainerStats, error) {
++        
++	fmt.Println("Sakshi.. Entering showStats")
++	stats := &libcontainer.ContainerStats{}
++	var err error
++	stats.CgroupStats, err = cgroupfs.GetStats(container.command.Cgroups)
++       
++	fmt.Println("Sakshi.. Cgroups Cpushares= ",container.command.Cgroups.CpuShares) 
++	if err != nil {
++		return stats, err
++	}
++/*	fmt.Println("*** Printing stats structure....***")
++	fmt.Println("*** CPUSTATS :: Totalusage:",stats.CgroupStats.CpuStats.CpuUsage.TotalUsage)
++	fmt.Println("*** CPUSTATS :: PercpuUsage:",stats.CgroupStats.      CpuStats.CpuUsage.PercpuUsage)
++	fmt.Println("*** CPUSTATS :: UsageinKernelMode",stats.CgroupStats.CpuStats.CpuUsage.UsageInKernelmode)
++	fmt.Println("*** CPUSTATS :: UsageinUserMode",stats.CgroupStats.CpuStats.CpuUsage.UsageInUsermode)*/
++	return stats, nil 
++}
++
++//Sakshi
++func (container *Container) setContainer(param string, value string)(error) {
++
++        fmt.Println("Sakshi.. Entering setContainer..")
++        //var err error
++	//active := native.activeContainer 
++	ID := container.command.ID
++	pid := container.GetPid()
++	fmt.Println("ID is ",ID)
++	fmt.Println("PID is ",pid)
++        driv := container.daemon.execDriver
++	fmt.Println("Printing Exec driver::",driv)
++	
++
++	fmt.Println("Sakshi.. Calling Active() of execdriver..")
++	
++	error := driv.Active(ID, param, value, pid)
++	if error != nil {
++                return error
++        }
++	fmt.Println("Sakshi.. Exit setContainer successfully!!")
++	return nil	
++}
++
+ func (container *Container) hostConfigPath() (string, error) {
+ 	return container.getRootResourcePath("hostconfig.json")
+ }
+diff --git a/daemon/daemon.go b/daemon/daemon.go
+index 1c41134..9cd22df 100644
+--- a/daemon/daemon.go
++++ b/daemon/daemon.go
+@@ -126,6 +126,8 @@ func (daemon *Daemon) Install(eng *engine.Engine) error {
+ 		"execCreate":        daemon.ContainerExecCreate,
+ 		"execStart":         daemon.ContainerExecStart,
+ 		"execResize":        daemon.ContainerExecResize,
++		"stats":             daemon.ContainerStats,
++		"set":               daemon.ContainerSet,
+ 	} {
+ 		if err := eng.Register(name, method); err != nil {
+ 			return err
+diff --git a/daemon/execdriver/driver.go b/daemon/execdriver/driver.go
+index cd65a2c..58d473f 100644
+--- a/daemon/execdriver/driver.go
++++ b/daemon/execdriver/driver.go
+@@ -7,6 +7,7 @@ import (
+ 	"os/exec"
+ 
+ 	"github.com/docker/libcontainer/devices"
++	"github.com/docker/libcontainer/cgroups"
+ )
+ 
+ // Context is a generic key value pair that allows
+@@ -51,6 +52,7 @@ type Driver interface {
+ 	Info(id string) Info                          // "temporary" hack (until we move state from core to plugins)
+ 	GetPidsForContainer(id string) ([]int, error) // Returns a list of pids for the given container.
+ 	Terminate(c *Command) error                   // kill it with fire
++	Active(id string, param string, value string, pid int) (error)
+ }
+ 
+ // Network settings of the container
+@@ -113,4 +115,5 @@ type Command struct {
+ 	CapDrop            []string            `json:"cap_drop"`
+ 	ContainerPid       int                 `json:"container_pid"`  // the pid for the process inside a container
+ 	ProcessConfig      ProcessConfig       `json:"process_config"` // Describes the init process of the container.
++	Cgroups            *cgroups.Cgroup	`json:"cgroups,omitempty"` // Sakshi
+ }
+diff --git a/daemon/execdriver/lxc/driver.go b/daemon/execdriver/lxc/driver.go
+index 13884fc..f4ed234 100644
+--- a/daemon/execdriver/lxc/driver.go
++++ b/daemon/execdriver/lxc/driver.go
+@@ -53,6 +53,13 @@ func (d *driver) Name() string {
+ 	return fmt.Sprintf("%s-%s", DriverName, version)
+ }
+ 
++//Sakshi FIXME
++//Sakshi
++func (d *driver) Active(id string, param string, value string, pid int)(error) {
++	return nil
++}
++
++
+ func (d *driver) Run(c *execdriver.Command, pipes *execdriver.Pipes, startCallback execdriver.StartCallback) (int, error) {
+ 	var (
+ 		term execdriver.Terminal
+diff --git a/daemon/execdriver/native/create.go b/daemon/execdriver/native/create.go
+index 7aee2d6..0c13ea0 100644
+--- a/daemon/execdriver/native/create.go
++++ b/daemon/execdriver/native/create.go
+@@ -49,10 +49,12 @@ func (d *driver) createContainer(c *execdriver.Command) (*libcontainer.Config, e
+ 			return nil, err
+ 		}
+ 	}
+-
++	fmt.Println("Sakshi.. Create() Intialshares=",c.Resources.CpuShares)
+ 	if err := d.setupCgroups(container, c); err != nil {
+ 		return nil, err
+ 	}
++	//Sakshi
++	c.Cgroups = container.Cgroups
+ 
+ 	if err := d.setupMounts(container, c); err != nil {
+ 		return nil, err
+@@ -69,6 +71,9 @@ func (d *driver) createContainer(c *execdriver.Command) (*libcontainer.Config, e
+ 	}
+ 	d.Unlock()
+ 
++	//sakshi
++	fmt.Println("Sakshi::In create container..printing cmd::  ",cmds)	
++
+ 	if err := configuration.ParseConfiguration(container, cmds, c.Config["native"]); err != nil {
+ 		return nil, err
+ 	}
+diff --git a/daemon/execdriver/native/driver.go b/daemon/execdriver/native/driver.go
+index ef3dc95..2e3a270 100644
+--- a/daemon/execdriver/native/driver.go
++++ b/daemon/execdriver/native/driver.go
+@@ -15,6 +15,7 @@ import (
+ 	"syscall"
+ 
+ 	"github.com/docker/docker/daemon/execdriver"
++	"github.com/docker/docker/daemon/execdriver/native/configuration"
+ 	"github.com/docker/docker/pkg/term"
+ 	"github.com/docker/libcontainer"
+ 	"github.com/docker/libcontainer/apparmor"
+@@ -60,6 +61,56 @@ func NewDriver(root, initPath string) (*driver, error) {
+ 	}, nil
+ }
+ 
++//Sakshi
++func (d *driver) Active(id string, param string, value string, pid int)(error) {
++	activeC := d.activeContainers[id]
++	//return activeC.container
++	if (true == (strings.EqualFold("cpushares", param))) {
++	
++	fmt.Println("Sakshi.. Active:: setting shares..")
++
++       	var(
++                opts  []string
++                
++       )
++
++	fmt.Println("Sakshi.. Active:: value is:::",value)
++	//opts = append(opts,value) 
++	if (true == strings.EqualFold("512", value)) {
++	opts = []string{
++			"cgroups.cpu_shares=512",
++		}
++	}
++
++	if (true == strings.EqualFold("1024", value)) {
++        opts = []string{
++                        "cgroups.cpu_shares=1024",
++                }
++        }
++        
++	if (true == strings.EqualFold("2048", value)) {
++        opts = []string{
++                        "cgroups.cpu_shares=2048",
++                }
++        }	
++	fmt.Println("Sakshi.. Active:: opts set as:::", opts)
++        if err := configuration.ParseConfiguration(activeC.container, nil, opts); err !=   nil {
++                return err
++        } else {
++		fmt.Println("Sakshi.. Active:: cpushares set as:::",activeC.container.Cgroups.CpuShares)
++	}
++	//Modify Cgroups	
++	cgroupRef, err := namespaces.SetupCgroups(activeC.container, pid)
++	if err != nil {
++		fmt.Println("Sakshi.. Active:: ERROR modifying Cgroups")
++                return err
++        }
++	fmt.Println("Sakshi.. Active:: printing cgroupRef::",cgroupRef)
++
++	}
++                return nil
++}
++
+ func (d *driver) Run(c *execdriver.Command, pipes *execdriver.Pipes, startCallback execdriver.StartCallback) (int, error) {
+ 	// take the Command and populate the libcontainer.Config from it
+ 	container, err := d.createContainer(c)
+diff --git a/daemon/info.go b/daemon/info.go
+index 3d3c9ba..7cbc38d 100644
+--- a/daemon/info.go
++++ b/daemon/info.go
+@@ -3,6 +3,7 @@ package daemon
+ import (
+ 	"os"
+ 	"runtime"
++	"fmt"
+ 
+ 	"github.com/docker/docker/dockerversion"
+ 	"github.com/docker/docker/engine"
+@@ -14,6 +15,7 @@ import (
+ )
+ 
+ func (daemon *Daemon) CmdInfo(job *engine.Job) engine.Status {
++	fmt.Println("******CmdInfo Daemon ******")
+ 	images, _ := daemon.Graph().Map()
+ 	var imgcount int
+ 	if images == nil {
+diff --git a/daemon/logs.go b/daemon/logs.go
+index b5cf86f..ee4d5a8 100644
+--- a/daemon/logs.go
++++ b/daemon/logs.go
+@@ -20,6 +20,7 @@ func (daemon *Daemon) ContainerLogs(job *engine.Job) engine.Status {
+ 		return job.Errorf("Usage: %s CONTAINER\n", job.Name)
+ 	}
+ 
++	fmt.Println("ENTER ContainerLogs on daemon side")
+ 	var (
+ 		name   = job.Args[0]
+ 		stdout = job.GetenvBool("stdout")
+diff --git a/docker/flags.go b/docker/flags.go
+index b6152e2..e96fcd7 100644
+--- a/docker/flags.go
++++ b/docker/flags.go
+@@ -86,6 +86,7 @@ func init() {
+ 			{"unpause", "Unpause a paused container"},
+ 			{"version", "Show the Docker version information"},
+ 			{"wait", "Block until a container stops, then print its exit code"},
++			{"stats", "Print stats of a container"},
+ 		} {
+ 			help += fmt.Sprintf("    %-10.10s%s\n", command[0], command[1])
+ 		}
+diff --git a/engine/env.go b/engine/env.go
+index 9b8f639..1a79fbd 100644
+--- a/engine/env.go
++++ b/engine/env.go
+@@ -88,6 +88,10 @@ func (env *Env) SetInt64(key string, value int64) {
+ 	env.Set(key, fmt.Sprintf("%d", value))
+ }
+ 
++func (env *Env) SetUint64(key string, value uint64) {
++        env.Set(key, fmt.Sprintf("%d", value))
++}
++
+ // Returns nil if key not found
+ func (env *Env) GetList(key string) []string {
+ 	sval := env.Get(key)
+@@ -230,6 +234,7 @@ func (env *Env) Encode(dst io.Writer) error {
+ 			m[k] = v
+ 		}
+ 	}
++	
+ 	if err := json.NewEncoder(dst).Encode(&m); err != nil {
+ 		return err
+ 	}
+diff --git a/vendor/src/github.com/docker/libcontainer/cgroups/fs/apply_raw.go b/vendor/src/github.com/docker/libcontainer/cgroups/fs/apply_raw.go
+index 443dbb6..8d30998 100644
+--- a/vendor/src/github.com/docker/libcontainer/cgroups/fs/apply_raw.go
++++ b/vendor/src/github.com/docker/libcontainer/cgroups/fs/apply_raw.go
+@@ -55,7 +55,6 @@ func Apply(c *cgroups.Cgroup, pid int) (cgroups.ActiveCgroup, error) {
+ 
+ 	return d, nil
+ }
+-
+ func Cleanup(c *cgroups.Cgroup) error {
+ 	d, err := getCgroupData(c, 0)
+ 	if err != nil {
