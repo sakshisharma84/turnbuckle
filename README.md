@@ -84,8 +84,7 @@ CmdSet:: SET SUCCESSFULLY!!
 How to use this patch ?
 -----------------------
 TODO
-
-Limitations/Issues
-------------------
+-----------------------
+Patch for latest docker version: COMING SOON!!
 
 For more details: Sakshi Sharma (ssharma311@gatech.edu)
