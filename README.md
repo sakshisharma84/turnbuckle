@@ -11,6 +11,7 @@ It is a docker patch to support two additional client commands:
 
 What is currenty supported ?
 ----------------------------
+This patch works for docker version 1.2.0.
 
 Get Command: 
 
