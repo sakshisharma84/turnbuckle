@@ -1,5 +1,6 @@
-docker_set_get
-==============
+Turnbuckle : Resource management of docker containers
+=======================================================
+Turnbuckle implements hooks in Docker daemon and extend docker’s client API to support resource introspection and management of docker container’s resource consumption.
 
 What is docket_set_get ?
 ------------------------
