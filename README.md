@@ -83,9 +83,9 @@ CmdSet:: SET SUCCESSFULLY!!
 ~/docker$
 ```
 
-How to use this patch ?
+Cgroup analysis for SET
 -----------------------
-TODO
+refer to pdf "behavior_analysis_cgroups"
 -----------------------
 Patch for latest docker version: COMING SOON!!
 
